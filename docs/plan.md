@@ -2,9 +2,13 @@
 
 ## Goal
 
-Build a small command-line tool for recording, listing, summarizing, and deleting
-personal expenses. Keep the implementation readable, use the Python standard
-library where practical, and keep business logic out of the CLI.
+Maintain a small command-line tool for recording, listing, summarizing, and
+deleting personal expenses. Keep the implementation readable, use the Python
+standard library where practical, and keep business logic out of the CLI.
+
+This plan records the CLI and SQLite migration work. The separate web-app
+roadmap, including the intended local-first and private-LAN deployment path, is
+in `docs/webapp_plan.md`.
 
 ## Status key
 
@@ -15,11 +19,14 @@ library where practical, and keep business logic out of the CLI.
 
 - [x] Define the expense model, including validation and integer-cent amounts.
 - [x] Implement the `add`, `list`, `summary`, and `delete` CLI commands.
-- [x] Cover the existing model, JSON storage, and CLI behavior with tests.
-- [x] Document the current JSON storage and command usage in the README.
+- [x] Cover model, SQLite storage, JSON import, and CLI behavior with tests.
+- [x] Document SQLite storage and command usage in the README.
 
-The items above describe the current implementation. The SQLite migration work
-below is still to be completed.
+The CLI implementation and SQLite migration sequence below are complete. The
+application uses SQLite by default. `storage.py` still supports JSON-backed
+behavior when explicitly passed a `.json` data path; decide whether to remove
+that legacy path behavior or retain it intentionally before defining the web
+application's storage contract.
 
 ## Expense data
 
@@ -70,7 +77,9 @@ the import command must leave the source file unchanged.
 
 Use Python's standard-library `sqlite3` module; do not add a dependency. Keep
 persistence behind the storage boundary so database details do not leak into
-the CLI or model validation.
+the CLI or model validation. SQLite is the default backend; JSON import is the
+documented migration path, while explicit JSON-backed data paths remain a
+legacy implementation behavior to resolve before web integration.
 
 ## Persistence and data safety
 
@@ -116,17 +125,17 @@ Cover:
 2. [x] Implement the JSON-to-SQLite import operation. Validate the complete
    source before committing, roll back the whole import on failure, and leave
    the source file unchanged.
-3. [ ] Update the CLI to use SQLite for all existing commands and add
+3. [x] Update the CLI to use SQLite for all existing commands and add
    `import-json <path>`, preserving existing command behavior and reporting
    import failures without success-shaped output.
-4. [ ] Update storage and CLI tests for the SQLite backend and JSON import,
+4. [x] Update storage and CLI tests for the SQLite backend and JSON import,
    while retaining coverage for existing behavior.
-5. [ ] Update the README with SQLite as primary storage, the default database
+5. [x] Update the README with SQLite as primary storage, the default database
    location, the JSON import command, and the fact that JSON is not used for
    ongoing storage.
-6. [ ] Update `.gitignore` if needed to exclude repository-local SQLite
+6. [x] Update `.gitignore` if needed to exclude repository-local SQLite
    databases and sidecar files.
-7. [ ] Run the test suite and Ruff checks; fix any issues introduced by the
+7. [x] Run the test suite and Ruff checks; fix any issues introduced by the
    migration.
 
 ## Completion criteria
@@ -142,3 +151,10 @@ Cover:
   CLI behavior using isolated temporary paths.
 - README usage and storage-location documentation match the implementation.
 - The test suite and Ruff checks pass.
+
+## Status
+
+The implementation sequence and completion criteria above are complete for
+the documented SQLite-default CLI. Resolve the legacy explicit-JSON-path
+behavior as part of the web application's initial boundary work; it does not
+change the default storage location or the documented JSON import workflow.

@@ -2,10 +2,11 @@
 
 ## Goal
 
-Evolve the expense tracker into a web app that can first be used privately and
-then, if desired, safely support multiple users. Keep the existing CLI working,
-reuse the expense domain rules, and practice an incremental, reviewable software
-delivery process.
+Evolve the expense tracker into a web app for local use first, then make it
+available to the owner and a small group of trusted people on a private LAN.
+Keep the existing CLI working, reuse the expense domain rules, and practice an
+incremental, reviewable software delivery process. Commercial product work and
+public internet hosting are not goals for this plan.
 
 The proposed first web stack is FastAPI with server-rendered pages. This keeps
 the first version in Python and avoids requiring a separate frontend build.
@@ -24,8 +25,10 @@ separate frontend is a higher priority.
 - [x] Separate CLI argument parsing and output from expense models and storage.
 - [x] Use SQLite for the default local storage backend and cover core behavior
   with tests.
-- [ ] Reconcile the status and remaining work in `docs/plan.md` with the
-  current implementation before building on it.
+- [x] Reconcile the SQLite migration status in `docs/plan.md` with the current
+  implementation.
+- [ ] Decide whether to remove or intentionally retain the legacy behavior
+  where an explicitly supplied `.json` data path uses JSON storage.
 
 ## Scope and principles
 
@@ -34,14 +37,19 @@ separate frontend is a higher priority.
   operations, and render responses. Do not put expense calculations or
   persistence logic in route handlers.
 - Reuse existing model validation and expense behavior where appropriate.
-- Start with a private, single-user deployment. Do not treat a shared login as
-  multi-user support.
-- Add user accounts and per-user data ownership before allowing multiple
-  people to use the same deployment.
-- Use SQLite for local development and private prototyping. Plan for PostgreSQL
-  before a hosted multi-user launch.
+- Build and verify the app locally before allowing LAN access.
+- Use SQLite on the host machine's local durable disk for the planned LAN
+  deployment. Do not put the database file on a network share or ephemeral
+  filesystem.
+- Choose whether LAN users share one ledger or need private individual
+  expenses before enabling access for other people. Implement data ownership
+  and per-user authorization only if the latter is required.
+- Restrict access to the private network and require appropriate access
+  controls; trusted users do not replace network or application security.
 - Ask before adding the web framework or any other dependency, consistent with
   the project dependency policy.
+- Revisit hosted deployment, PostgreSQL, or commercial-readiness work only if
+  the intended use changes.
 
 ## Architecture
 
@@ -64,13 +72,13 @@ operations; do not duplicate business rules between the two interfaces.
 
 ### 1. Clarify the current application boundary
 
-- [ ] Compare `docs/plan.md` with the current source, tests, and README; update
+- [x] Compare `docs/plan.md` with the current source, tests, and README; update
   stale completion status or open tasks.
 - [ ] Decide whether JSON-path storage compatibility is still needed, and
   document the supported storage interface for future web code.
-- [ ] Identify the functions the web interface can call for adding, listing,
+- [x] Identify the functions the web interface can call for adding, listing,
   summarizing, and deleting expenses.
-- [ ] Record any missing test coverage that blocks safely reusing those
+- [x] Record any missing test coverage that blocks safely reusing those
   operations.
 
 ### 2. Establish the web application skeleton
@@ -100,46 +108,52 @@ operations; do not duplicate business rules between the two interfaces.
   deletion, and storage failures.
 - [ ] Verify the CLI continues to work against the same local data.
 
-### 4. Run privately and establish basic operations
+### 4. Verify local operation and establish basic data safety
 
-- [ ] Choose a private initial hosting or local-network setup; do not expose
-  the app publicly without access control.
-- [ ] Confirm the chosen host has durable storage before using SQLite there.
+- [ ] Run the app locally and verify expenses persist across restarts.
 - [ ] Configure the database location outside the source tree and keep database
   files out of version control.
 - [ ] Document how to start and stop the app, where its data lives, and how to
   make and restore a backup.
-- [ ] Test the deployed app and verify expenses persist across restarts.
+- [ ] Test restoring a backup before relying on the app for personal records.
 
-### 5. Add multi-user support before inviting other users
+### 5. Choose the LAN sharing model
 
-- [ ] Choose an authentication approach and define account creation,
-  sign-in, sign-out, and account recovery expectations.
-- [ ] Add a user identity and associate every expense with its owner.
-- [ ] Ensure every expense read, summary, filter, update, and delete is scoped
-  to the signed-in user.
-- [ ] Add database migrations for the user and ownership schema changes,
-  including a deliberate strategy for existing single-user expenses.
-- [ ] Protect sessions and credentials using framework-supported mechanisms;
-  never store secrets in source control.
-- [ ] Add tests proving users cannot view, summarize, or delete another user's
-  expenses, as well as tests for unauthenticated access.
-- [ ] Review authorization behavior before making the deployment available to
-  other people.
+- [ ] Decide whether everyone on the LAN uses one shared ledger or each person
+  needs private expense records.
+- [ ] For a shared ledger, define who can view, add, and delete records, and
+  whether changes need to be attributable to a person.
+- [ ] For private records, design accounts and owner-scoped storage before
+  enabling LAN access; scope every read, summary, filter, update, and delete to
+  the signed-in user.
+- [ ] Choose access controls appropriate for the selected model, protect
+  credentials and sessions, and keep secrets out of source control.
+- [ ] Add tests for the selected authorization rules, including cross-user
+  isolation if private records are supported.
 
-### 6. Prepare for hosted multi-user use
+### 6. Deploy to a private LAN
 
-- [ ] Add PostgreSQL support and use migrations to manage schema changes.
-- [ ] Test database behavior against the production database engine rather
-  than relying only on SQLite tests.
-- [ ] Configure HTTPS, secure session settings, and production secrets through
-  the hosting environment.
-- [ ] Establish automated backups and verify restoration from a backup.
-- [ ] Add operational logging and a way to detect application or database
-  failures without logging sensitive expense details.
-- [ ] Document deployment, upgrades, rollback expectations, data retention,
-  and account/data deletion behavior.
-- [ ] Run the complete test suite and lint checks before release.
+- [ ] Select a host that can remain available to LAN users and has durable
+  local storage for the SQLite database.
+- [ ] Configure the app to listen only on the intended LAN interface and
+  restrict inbound access with the host firewall or equivalent network rules.
+- [ ] Use an authenticated, protected connection appropriate to the LAN setup;
+  do not expose the app directly to the public internet.
+- [ ] Configure reliable startup/restart behavior and document how to update
+  and stop the app.
+- [ ] Configure backups on the host and periodically verify restoration.
+- [ ] Test from each intended type of client and verify access restrictions,
+  persistence across restarts, and the selected sharing/authorization model.
+- [ ] Run the complete test suite and Ruff checks before inviting other users.
+
+## Out of scope unless the goal changes
+
+- Public internet access or commercial launch.
+- Hosted-app platforms and deployment automation for public production.
+- PostgreSQL migration; the planned LAN setup uses SQLite on the application
+  host's local disk.
+- Multi-user accounts and private per-user records if the group explicitly
+  chooses a shared ledger instead.
 
 ## Tests
 
@@ -153,8 +167,9 @@ Use temporary databases and a test configuration. Cover:
 - Deletion and confirmation behavior.
 - Persistence errors and failed operations that must not return success.
 - CLI behavior remaining intact as the web interface is introduced.
-- Authentication and per-user authorization before multi-user use.
-- Database migrations and ownership behavior when PostgreSQL support is added.
+- LAN access controls and sharing-model authorization before other people use
+  the deployment.
+- Cross-user isolation if the selected model includes private user records.
 
 ## Completion criteria
 
@@ -164,8 +179,9 @@ Use temporary databases and a test configuration. Cover:
   expenses with clear success and error responses.
 - The app's data location, startup procedure, and backup/restore procedure are
   documented.
-- Multi-user access is not enabled until authentication, ownership enforcement,
-  migration behavior, and cross-user isolation tests are in place.
-- A hosted multi-user release uses durable PostgreSQL storage, secure
-  configuration, HTTPS, and a tested backup/restore process.
+- The LAN sharing model is explicitly chosen, and matching access controls and
+  tests are in place before other people use the app.
+- The LAN deployment uses durable host-local storage, restricted network
+  access, documented startup/restart procedures, and a tested backup/restore
+  process.
 - The test suite and Ruff checks pass for each completed implementation phase.
