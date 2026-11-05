@@ -8,15 +8,39 @@ Keep the existing CLI working, reuse the expense domain rules, and practice an
 incremental, reviewable software delivery process. Commercial product work and
 public internet hosting are not goals for this plan.
 
-The proposed first web stack is FastAPI with server-rendered pages. This keeps
-the first version in Python and avoids requiring a separate frontend build.
-Revisit the framework choice before implementation if learning Django or a
-separate frontend is a higher priority.
+The initial web stack is FastAPI with server-rendered pages. This keeps the
+first version in Python and avoids requiring a separate frontend build.
 
 ## Status key
 
 - `[x]` Complete
 - `[ ]` Not complete
+
+## Technology stack
+
+- **Python:** Continue using the project's supported Python version
+  (currently Python 3.12 or later, as declared in `pyproject.toml`).
+- **FastAPI:** Define the web application and routes, bind and validate HTTP
+  input, and construct responses. Route handlers call existing model and
+  storage operations rather than implementing expense rules or persistence.
+- **Uvicorn:** Run the FastAPI ASGI application. The local development command
+  is `.venv\Scripts\uvicorn.exe expense_tracker.web:app --reload`; reload is
+  for development, not the LAN deployment command.
+- **Jinja2:** Render HTML on the server without a separate frontend build.
+  Keep templates in `src/expense_tracker/templates/` and include them as
+  package data so they are available when the application is installed.
+- **httpx:** Provide the HTTP client used by FastAPI's test client. It is a
+  test dependency, not a production server component.
+- **SQLite:** Continue using the existing storage module and host-local
+  database. Use the existing default path unless `EXPENSE_TRACKER_DB_PATH`
+  overrides it; do not commit database files or secrets.
+- **Tests and lint:** Continue using pytest and Ruff. Keep web tests isolated
+  from the user's database with temporary databases and test configuration.
+
+FastAPI, Uvicorn, and Jinja2 are approved application dependencies; httpx is
+approved for tests. Declare application dependencies in project metadata and
+httpx with the development/test dependencies. Do not add a frontend framework,
+build system, or other dependencies without a clear need and approval.
 
 ## Existing foundation
 
@@ -48,8 +72,8 @@ separate frontend is a higher priority.
   and per-user authorization only if the latter is required.
 - Restrict access to the private network and require appropriate access
   controls; trusted users do not replace network or application security.
-- Ask before adding the web framework or any other dependency, consistent with
-  the project dependency policy.
+- Use only the approved web dependencies listed in the technology stack;
+  ask before introducing additional dependencies.
 - Revisit hosted deployment, PostgreSQL, or commercial-readiness work only if
   the intended use changes.
 
@@ -62,8 +86,8 @@ separate frontend is a higher priority.
   into SQLite.
 - `src/expense_tracker/`: Add a web application module for FastAPI routes and
   configuration. Keep request/response concerns out of the CLI and storage.
-- `templates/` and `static/`: Store server-rendered page templates and
-  application assets if needed.
+- `src/expense_tracker/templates/` and, if needed,
+  `src/expense_tracker/static/`: Store package-local templates and assets.
 - `tests/`: Cover web behavior independently from existing model, storage, and
   CLI tests.
 
@@ -88,16 +112,18 @@ operations; do not duplicate business rules between the two interfaces.
 
 ### 2. Establish the web application skeleton
 
-- [ ] Confirm FastAPI with server-rendered pages as the initial framework
-  choice; ask before adding its dependency.
-- [ ] Add an application entry point that can be run locally without changing
+- [x] Confirm FastAPI with server-rendered pages, Uvicorn, Jinja2, and httpx
+  for tests as the initial stack.
+- [x] Add an application entry point that can be run locally without changing
   the existing CLI entry point.
-- [ ] Add a basic health or home route and a minimal page template.
+- [x] Add a basic health or home route and a minimal page template.
 - [ ] Keep database path and other environment-specific settings configurable
-  without committing secrets.
+  without committing secrets; use `EXPENSE_TRACKER_DB_PATH` to override the
+  existing database default.
 - [ ] Add focused tests for application startup, route responses, and error
   handling.
-- [ ] Document local development and run commands.
+- [ ] Document local development and run commands, including
+  `.venv\Scripts\uvicorn.exe expense_tracker.web:app --reload` for local use.
 
 ### 3. Deliver the private, single-user web MVP
 
