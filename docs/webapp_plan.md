@@ -27,8 +27,10 @@ separate frontend is a higher priority.
   with tests.
 - [x] Reconcile the SQLite migration status in `docs/plan.md` with the current
   implementation.
-- [ ] Decide whether to remove or intentionally retain the legacy behavior
-  where an explicitly supplied `.json` data path uses JSON storage.
+- [x] Decide to remove the legacy behavior where an explicitly supplied
+  `.json` data path uses JSON storage, while retaining JSON import into SQLite.
+- [x] Remove JSON-backed ongoing storage and ensure SQLite is the sole storage
+  backend before web integration.
 
 ## Scope and principles
 
@@ -55,8 +57,9 @@ separate frontend is a higher priority.
 
 - `src/expense_tracker/models.py`: Keep expense types, validation, and
   calculations independent of HTTP and presentation concerns.
-- `src/expense_tracker/storage.py`: Continue to own persistence. Add or adapt
-  operations only where the web application needs them.
+- `src/expense_tracker/storage.py`: Own SQLite persistence for all ongoing
+  expense operations. Keep JSON support limited to importing existing records
+  into SQLite.
 - `src/expense_tracker/`: Add a web application module for FastAPI routes and
   configuration. Keep request/response concerns out of the CLI and storage.
 - `templates/` and `static/`: Store server-rendered page templates and
@@ -74,8 +77,10 @@ operations; do not duplicate business rules between the two interfaces.
 
 - [x] Compare `docs/plan.md` with the current source, tests, and README; update
   stale completion status or open tasks.
-- [ ] Decide whether JSON-path storage compatibility is still needed, and
-  document the supported storage interface for future web code.
+- [x] Decide to remove JSON-path storage compatibility, retain JSON import, and
+  document SQLite as the sole ongoing storage backend.
+- [x] Remove the legacy JSON-backed path behavior while preserving the
+  `import-json` migration command.
 - [x] Identify the functions the web interface can call for adding, listing,
   summarizing, and deleting expenses.
 - [x] Record any missing test coverage that blocks safely reusing those

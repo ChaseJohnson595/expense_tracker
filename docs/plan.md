@@ -22,11 +22,9 @@ in `docs/webapp_plan.md`.
 - [x] Cover model, SQLite storage, JSON import, and CLI behavior with tests.
 - [x] Document SQLite storage and command usage in the README.
 
-The CLI implementation and SQLite migration sequence below are complete. The
-application uses SQLite by default. `storage.py` still supports JSON-backed
-behavior when explicitly passed a `.json` data path; decide whether to remove
-that legacy path behavior or retain it intentionally before defining the web
-application's storage contract.
+The CLI implementation and SQLite migration sequence below are complete.
+SQLite is the only ongoing storage backend. Keep `import-json <path>` as the
+supported way to import existing JSON records into SQLite.
 
 ## Expense data
 
@@ -77,9 +75,8 @@ the import command must leave the source file unchanged.
 
 Use Python's standard-library `sqlite3` module; do not add a dependency. Keep
 persistence behind the storage boundary so database details do not leak into
-the CLI or model validation. SQLite is the default backend; JSON import is the
-documented migration path, while explicit JSON-backed data paths remain a
-legacy implementation behavior to resolve before web integration.
+the CLI or model validation. SQLite is the only ongoing backend; JSON import
+is the documented migration path.
 
 ## Persistence and data safety
 
@@ -137,6 +134,9 @@ Cover:
    databases and sidecar files.
 7. [x] Run the test suite and Ruff checks; fix any issues introduced by the
    migration.
+8. [x] Remove JSON-backed storage selected by `.json` data paths, and update
+   storage tests to verify that ongoing operations use SQLite. Preserve and
+   test the `import-json <path>` migration command.
 
 ## Completion criteria
 
@@ -154,7 +154,5 @@ Cover:
 
 ## Status
 
-The implementation sequence and completion criteria above are complete for
-the documented SQLite-default CLI. Resolve the legacy explicit-JSON-path
-behavior as part of the web application's initial boundary work; it does not
-change the default storage location or the documented JSON import workflow.
+The SQLite migration sequence is complete. JSON is supported only as an import
+format; all ongoing expense storage uses SQLite.

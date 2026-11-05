@@ -1,7 +1,5 @@
 import json
-import os
 import sqlite3
-import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -15,10 +13,8 @@ class StorageError(Exception):
 
 
 def load_expenses(data_path: Path | str = DEFAULT_DATA_PATH) -> list[Expense]:
-    """Load expenses from JSON if the path is JSON-backed, otherwise use SQLite."""
+    """Load expenses from the SQLite database."""
     path = Path(data_path)
-    if path.suffix.lower() == ".json":
-        return _load_json_expenses(path)
     if not path.exists():
         return []
 
@@ -44,12 +40,8 @@ def load_expenses(data_path: Path | str = DEFAULT_DATA_PATH) -> list[Expense]:
 def save_expenses(
     expenses: list[Expense], data_path: Path | str = DEFAULT_DATA_PATH
 ) -> None:
-    """Replace stored expenses in the active storage backend."""
+    """Replace all expenses in the SQLite database."""
     path = Path(data_path)
-    if path.suffix.lower() == ".json":
-        _save_json_expenses(expenses, path)
-        return
-
     _ensure_expenses_are_valid(expenses)
     connection: sqlite3.Connection | None = None
     try:
@@ -130,9 +122,6 @@ def _insert_imported_expenses(
 def add_expense(expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH) -> Expense:
     """Insert a single expense and reject duplicate IDs."""
     path = Path(data_path)
-    if path.suffix.lower() == ".json":
-        return _add_json_expense(expense, path)
-
     if not isinstance(expense, Expense):
         raise TypeError("expenses must contain only Expense instances")
     connection: sqlite3.Connection | None = None
@@ -179,22 +168,6 @@ def list_expenses(
         raise ValueError("start_date must be on or before end_date")
 
     path = Path(data_path)
-    if path.suffix.lower() == ".json":
-        expenses = _load_json_expenses(path)
-        return sorted(
-            (
-                expense
-                for expense in expenses
-                if (start is None or expense.date >= start)
-                and (end is None or expense.date <= end)
-                and (
-                    normalized_category is None
-                    or expense.category.casefold() == normalized_category.casefold()
-                )
-            ),
-            key=lambda expense: (expense.date, expense.id),
-            reverse=True,
-        )
     if not path.exists():
         return []
 
@@ -231,13 +204,6 @@ def list_expenses(
 def delete_expense(expense_id: str, data_path: Path | str = DEFAULT_DATA_PATH) -> bool:
     """Delete the matching expense and return whether an expense was found."""
     path = Path(data_path)
-    if path.suffix.lower() == ".json":
-        expenses = _load_json_expenses(path)
-        remaining = [expense for expense in expenses if expense.id != expense_id]
-        if len(remaining) == len(expenses):
-            return False
-        _save_json_expenses(remaining, path)
-        return True
     if not path.exists():
         return False
 
@@ -346,40 +312,6 @@ def _load_json_expenses(path: Path) -> list[Expense]:
     return _decode_expenses(records, path)
 
 
-def _save_json_expenses(expenses: list[Expense], path: Path) -> None:
-    _ensure_expenses_are_valid(expenses)
-    records = [_expense_record(expense) for expense in expenses]
-    temporary_path: Path | None = None
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(
-            mode="w",
-            encoding="utf-8",
-            dir=path.parent,
-            prefix=f".{path.name}.",
-            suffix=".tmp",
-            delete=False,
-        ) as temporary_file:
-            temporary_path = Path(temporary_file.name)
-            json.dump(records, temporary_file, ensure_ascii=False, indent=2)
-            temporary_file.write("\n")
-        os.replace(temporary_path, path)
-    except (OSError, UnicodeError) as error:
-        cleanup_error = _remove_temporary_file(temporary_path)
-        message = f"Could not save expenses to {path}: {error}"
-        if cleanup_error is not None:
-            message += f"; could not remove temporary file: {cleanup_error}"
-        raise StorageError(message) from error
-
-
-def _add_json_expense(expense: Expense, path: Path) -> Expense:
-    expenses = _load_json_expenses(path)
-    if any(existing.id == expense.id for existing in expenses):
-        raise ValueError(f"An expense with ID {expense.id!r} already exists")
-    _save_json_expenses([*expenses, expense], path)
-    return expense
-
-
 def _decode_expenses(records: Any, path: Path) -> list[Expense]:
     if not isinstance(records, list):
         raise StorageError(f"Expense file {path} must contain a JSON array")
@@ -415,29 +347,7 @@ def _decode_expense(record: Any) -> Expense:
     )
 
 
-def _expense_record(expense: Expense) -> dict[str, Any]:
-    if not isinstance(expense, Expense):
-        raise TypeError("expenses must contain only Expense instances")
-    return {
-        "amount_cents": expense.amount_cents,
-        "category": expense.category,
-        "date": expense.date,
-        "note": expense.note,
-        "id": expense.id,
-    }
-
-
 def _ensure_unique_ids(expenses: list[Expense]) -> None:
     ids = [expense.id for expense in expenses]
     if len(ids) != len(set(ids)):
         raise ValueError("expense IDs must be unique")
-
-
-def _remove_temporary_file(path: Path | None) -> OSError | None:
-    if path is None:
-        return None
-    try:
-        path.unlink(missing_ok=True)
-    except OSError as error:
-        return error
-    return None

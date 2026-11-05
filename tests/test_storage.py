@@ -52,6 +52,26 @@ def test_save_and_load_round_trip_creates_parent_directory(tmp_path: Path) -> No
     assert rows == [("food1234", 1250, "food", "2025-01-02", "Lunch")]
 
 
+def test_json_named_data_path_uses_sqlite_for_all_storage_operations(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "expenses.json"
+    first = make_expense(1250, "food", "2025-01-02", "food1234")
+    second = make_expense(400, "transit", "2025-01-03", "transit1")
+
+    save_expenses([first], path)
+    assert add_expense(second, path) == second
+    assert list_expenses(path) == [second, first]
+    assert load_expenses(path) == [second, first]
+
+    with sqlite3.connect(path) as connection:
+        rows = connection.execute("SELECT id FROM expenses ORDER BY id").fetchall()
+    assert rows == [("food1234",), ("transit1",)]
+
+    assert delete_expense("food1234", path) is True
+    assert load_expenses(path) == [second]
+
+
 def test_import_json_expenses_imports_records_and_preserves_source(
     tmp_path: Path,
 ) -> None:
