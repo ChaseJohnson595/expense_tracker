@@ -12,10 +12,10 @@ from expense_tracker.models import (
     validate_month,
 )
 from expense_tracker.storage import (
-    DEFAULT_DATA_PATH,
     StorageError,
     add_expense,
     delete_expense,
+    get_database_path,
     import_json_expenses,
     list_expenses,
     load_expenses,
@@ -60,7 +60,7 @@ def main(
 ) -> int:
     parser = build_parser()
     arguments = parser.parse_args(argv)
-    path = data_path if data_path is not None else DEFAULT_DATA_PATH
+    path = get_database_path(data_path)
     try:
         return _dispatch(arguments, path, today)
     except (StorageError, ValueError) as error:
