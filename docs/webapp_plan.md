@@ -117,12 +117,12 @@ operations; do not duplicate business rules between the two interfaces.
 - [x] Add an application entry point that can be run locally without changing
   the existing CLI entry point.
 - [x] Add a basic health or home route and a minimal page template.
-- [ ] Keep database path and other environment-specific settings configurable
+- [x] Keep database path and other environment-specific settings configurable
   without committing secrets; use `EXPENSE_TRACKER_DB_PATH` to override the
   existing database default.
-- [ ] Add focused tests for application startup, route responses, and error
+- [x] Add focused tests for application startup, route responses, and error
   handling.
-- [ ] Document local development and run commands, including
+- [x] Document local development and run commands, including
   `.venv\Scripts\uvicorn.exe expense_tracker.web:app --reload` for local use.
 
 ### 3. Deliver the private, single-user web MVP

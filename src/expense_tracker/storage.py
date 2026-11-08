@@ -1,4 +1,5 @@
 import json
+import os
 import sqlite3
 from pathlib import Path
 from typing import Any
@@ -8,13 +9,25 @@ from expense_tracker.models import Expense, validate_category, validate_date
 DEFAULT_DATA_PATH = Path.home() / ".expense_tracker" / "expenses.sqlite3"
 
 
+def get_database_path(data_path: Path | str | None = None) -> Path:
+    """Resolve the configured SQLite path, honoring the environment override."""
+    if data_path is not None:
+        return Path(data_path).expanduser()
+
+    override = os.environ.get("EXPENSE_TRACKER_DB_PATH")
+    if override and override.strip():
+        return Path(override).expanduser()
+
+    return DEFAULT_DATA_PATH
+
+
 class StorageError(Exception):
     """Raised when expense data cannot be read or written safely."""
 
 
-def load_expenses(data_path: Path | str = DEFAULT_DATA_PATH) -> list[Expense]:
+def load_expenses(data_path: Path | str | None = None) -> list[Expense]:
     """Load expenses from the SQLite database."""
-    path = Path(data_path)
+    path = get_database_path(data_path)
     if not path.exists():
         return []
 
@@ -38,10 +51,10 @@ def load_expenses(data_path: Path | str = DEFAULT_DATA_PATH) -> list[Expense]:
 
 
 def save_expenses(
-    expenses: list[Expense], data_path: Path | str = DEFAULT_DATA_PATH
+    expenses: list[Expense], data_path: Path | str | None = None
 ) -> None:
     """Replace all expenses in the SQLite database."""
-    path = Path(data_path)
+    path = get_database_path(data_path)
     _ensure_expenses_are_valid(expenses)
     connection: sqlite3.Connection | None = None
     try:
@@ -65,7 +78,7 @@ def save_expenses(
 
 
 def import_json_expenses(
-    source_path: Path | str, data_path: Path | str = DEFAULT_DATA_PATH
+    source_path: Path | str, data_path: Path | str | None = None
 ) -> int:
     """Import validated JSON expenses atomically and return the imported count."""
     source = Path(source_path)
@@ -73,7 +86,7 @@ def import_json_expenses(
         raise StorageError(f"Expense file {source} does not exist")
     expenses = _load_json_expenses(source)
 
-    path = Path(data_path)
+    path = get_database_path(data_path)
     connection: sqlite3.Connection | None = None
     try:
         connection = _connect_database(path)
@@ -119,9 +132,9 @@ def _insert_imported_expenses(
         ) from error
 
 
-def add_expense(expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH) -> Expense:
+def add_expense(expense: Expense, data_path: Path | str | None = None) -> Expense:
     """Insert a single expense and reject duplicate IDs."""
-    path = Path(data_path)
+    path = get_database_path(data_path)
     if not isinstance(expense, Expense):
         raise TypeError("expenses must contain only Expense instances")
     connection: sqlite3.Connection | None = None
@@ -154,7 +167,7 @@ def add_expense(expense: Expense, data_path: Path | str = DEFAULT_DATA_PATH) -> 
 
 
 def list_expenses(
-    data_path: Path | str = DEFAULT_DATA_PATH,
+    data_path: Path | str | None = None,
     *,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -167,7 +180,7 @@ def list_expenses(
     if start is not None and end is not None and start > end:
         raise ValueError("start_date must be on or before end_date")
 
-    path = Path(data_path)
+    path = get_database_path(data_path)
     if not path.exists():
         return []
 
@@ -201,9 +214,9 @@ def list_expenses(
     return [_row_to_expense(row) for row in rows]
 
 
-def delete_expense(expense_id: str, data_path: Path | str = DEFAULT_DATA_PATH) -> bool:
+def delete_expense(expense_id: str, data_path: Path | str | None = None) -> bool:
     """Delete the matching expense and return whether an expense was found."""
-    path = Path(data_path)
+    path = get_database_path(data_path)
     if not path.exists():
         return False
 

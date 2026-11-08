@@ -60,6 +60,29 @@ application creates the parent directory and database schema automatically when
 needed. JSON remains an import-only format for migrating existing records into
 SQLite; it is not used for ongoing storage.
 
+## Local web app
+
+Start the app with:
+
+```powershell
+.venv\Scripts\uvicorn.exe expense_tracker.web:app --reload
+```
+
+The app listens on the default local FastAPI port (`127.0.0.1:8000`). To keep
+the database in a custom location without committing secrets:
+
+```powershell
+$env:EXPENSE_TRACKER_DB_PATH = "$HOME\.expense_tracker\expenses.sqlite3"
+.venv\Scripts\uvicorn.exe expense_tracker.web:app --reload
+```
+
+On macOS or Linux:
+
+```bash
+export EXPENSE_TRACKER_DB_PATH="$HOME/.expense_tracker/expenses.sqlite3"
+.venv/bin/uvicorn expense_tracker.web:app --reload
+```
+
 ## Project structure
 
 ```
