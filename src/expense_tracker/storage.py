@@ -50,9 +50,7 @@ def load_expenses(data_path: Path | str | None = None) -> list[Expense]:
     return [_row_to_expense(row) for row in rows]
 
 
-def save_expenses(
-    expenses: list[Expense], data_path: Path | str | None = None
-) -> None:
+def save_expenses(expenses: list[Expense], data_path: Path | str | None = None) -> None:
     """Replace all expenses in the SQLite database."""
     path = get_database_path(data_path)
     _ensure_expenses_are_valid(expenses)
