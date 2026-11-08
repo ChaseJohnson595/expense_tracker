@@ -29,7 +29,7 @@ first version in Python and avoids requiring a separate frontend build.
 - **Jinja2:** Render HTML on the server without a separate frontend build.
   Keep templates in `src/expense_tracker/templates/` and include them as
   package data so they are available when the application is installed.
-- **httpx:** Provide the HTTP client used by FastAPI's test client. It is a
+- **httpx2:** Provide the HTTP client used by FastAPI's test client. It is a
   test dependency, not a production server component.
 - **SQLite:** Continue using the existing storage module and host-local
   database. Use the existing default path unless `EXPENSE_TRACKER_DB_PATH`
@@ -37,9 +37,9 @@ first version in Python and avoids requiring a separate frontend build.
 - **Tests and lint:** Continue using pytest and Ruff. Keep web tests isolated
   from the user's database with temporary databases and test configuration.
 
-FastAPI, Uvicorn, and Jinja2 are approved application dependencies; httpx is
+FastAPI, Uvicorn, and Jinja2 are approved application dependencies; httpx2 is
 approved for tests. Declare application dependencies in project metadata and
-httpx with the development/test dependencies. Do not add a frontend framework,
+httpx2 with the development/test dependencies. Do not add a frontend framework,
 build system, or other dependencies without a clear need and approval.
 
 ## Existing foundation
@@ -112,7 +112,7 @@ operations; do not duplicate business rules between the two interfaces.
 
 ### 2. Establish the web application skeleton
 
-- [x] Confirm FastAPI with server-rendered pages, Uvicorn, Jinja2, and httpx
+- [x] Confirm FastAPI with server-rendered pages, Uvicorn, Jinja2, and httpx2
   for tests as the initial stack.
 - [x] Add an application entry point that can be run locally without changing
   the existing CLI entry point.
