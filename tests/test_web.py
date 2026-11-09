@@ -57,10 +57,9 @@ def test_home_route_renders_minimal_page() -> None:
 
 
 def test_home_lists_expenses_newest_first(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
     add_expense(Expense(1250, "Food", "2026-11-07", "Older"), database_path)
     add_expense(Expense(250, "Transit", "2026-11-08", "Newer"), database_path)
 
@@ -74,10 +73,9 @@ def test_home_lists_expenses_newest_first(
 
 
 def test_home_shows_current_month_and_category_totals(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
     today = date.today()
     previous_month = (
         date(today.year - 1, 12, 15)
@@ -100,10 +98,9 @@ def test_home_shows_current_month_and_category_totals(
 
 
 def test_home_filters_expenses_by_inclusive_dates_and_category(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
     add_expense(Expense(100, "Food", "2026-11-01", "Start"), database_path)
     add_expense(Expense(200, "Food", "2026-11-30", "End"), database_path)
     add_expense(Expense(300, "Transit", "2026-11-15", "Other category"), database_path)
@@ -130,10 +127,9 @@ def test_home_filters_expenses_by_inclusive_dates_and_category(
 
 
 def test_delete_confirmation_does_not_remove_expense(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
     expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
     add_expense(expense, database_path)
 
@@ -150,10 +146,9 @@ def test_delete_confirmation_does_not_remove_expense(
 
 
 def test_confirmed_delete_removes_expense(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
     expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
     add_expense(expense, database_path)
 
@@ -167,11 +162,7 @@ def test_confirmed_delete_removes_expense(
     assert "Expense deleted successfully." in result.text
 
 
-def test_home_rejects_reversed_date_filter(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
-    monkeypatch.setattr(app.state, "database_path", str(tmp_path / "expenses.sqlite3"))
-
+def test_home_rejects_reversed_date_filter() -> None:
     with TestClient(app) as client:
         response = client.get(
             "/", params={"start_date": "2026-11-30", "end_date": "2026-11-01"}
@@ -182,10 +173,9 @@ def test_home_rejects_reversed_date_filter(
 
 
 def test_create_expense_form_saves_valid_expense(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    tmp_path: Path,
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
-    monkeypatch.setattr(app.state, "database_path", str(database_path))
 
     with TestClient(app) as client:
         response = client.post(
