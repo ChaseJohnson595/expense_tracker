@@ -38,6 +38,52 @@
           <button type="submit">Add expense</button>
         </form>
       </section>
+      <section aria-labelledby="expenses-heading">
+        <h2 id="expenses-heading">Expenses</h2>
+        <form action="/" method="get">
+          <p>
+            <label for="start-date">From</label>
+            <input id="start-date" name="start_date" type="date"
+                   value="{{ filters.start_date }}">
+          </p>
+          <p>
+            <label for="end-date">Through</label>
+            <input id="end-date" name="end_date" type="date"
+                   value="{{ filters.end_date }}">
+          </p>
+          <p>
+            <label for="filter-category">Category</label>
+            <input id="filter-category" name="category" type="text"
+                   value="{{ filters.category }}">
+          </p>
+          <button type="submit">Filter expenses</button>
+          <a href="/">Clear filters</a>
+        </form>
+        {% if expenses %}
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Date</th>
+              <th scope="col">Category</th>
+              <th scope="col">Amount</th>
+              <th scope="col">Note</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for expense in expenses %}
+            <tr>
+              <td>{{ expense.date }}</td>
+              <td>{{ expense.category }}</td>
+              <td>${{ "%d.%02d"|format(expense.amount_cents // 100, expense.amount_cents % 100) }}</td>
+              <td>{{ expense.note or "" }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <p>No expenses found.</p>
+        {% endif %}
+      </section>
     </main>
   </body>
 </html>

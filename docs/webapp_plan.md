@@ -128,7 +128,7 @@ operations; do not duplicate business rules between the two interfaces.
 ### 3. Deliver the private, single-user web MVP
 
 - [x] Add a form for creating an expense using existing validation rules.
-- [ ] Show expenses newest first, with the existing date-range and category
+- [x] Show expenses newest first, with the existing date-range and category
   filters where practical.
 - [ ] Show the monthly total and category totals using integer cents.
 - [ ] Provide deletion with an explicit confirmation to reduce accidental data

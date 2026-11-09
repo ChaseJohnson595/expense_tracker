@@ -7,7 +7,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
 from expense_tracker.models import create_expense
-from expense_tracker.storage import StorageError, add_expense, get_database_path
+from expense_tracker.storage import (
+    StorageError,
+    add_expense,
+    get_database_path,
+    list_expenses,
+)
 
 app = FastAPI(title="Expense Tracker")
 app.state.database_path = str(get_database_path())
@@ -85,6 +90,27 @@ def _render_home(
     created: bool = False,
     status_code: int = 200,
 ) -> HTMLResponse:
+    filters = {
+        "start_date": request.query_params.get("start_date", ""),
+        "end_date": request.query_params.get("end_date", ""),
+        "category": request.query_params.get("category", ""),
+    }
+    try:
+        expenses = list_expenses(
+            app.state.database_path,
+            start_date=filters["start_date"] or None,
+            end_date=filters["end_date"] or None,
+            category=filters["category"] or None,
+        )
+    except ValueError as list_error:
+        error = str(list_error)
+        status_code = 400
+        expenses = []
+    except StorageError as list_error:
+        error = f"Could not load expenses: {list_error}"
+        status_code = 500
+        expenses = []
+
     form_values = form or {
         "amount": "",
         "category": "",
@@ -99,6 +125,8 @@ def _render_home(
             "form": form_values,
             "error": error,
             "created": created,
+            "filters": filters,
+            "expenses": expenses,
         },
         status_code=status_code,
     )
