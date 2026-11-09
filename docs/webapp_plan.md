@@ -127,17 +127,17 @@ operations; do not duplicate business rules between the two interfaces.
 
 ### 3. Deliver the private, single-user web MVP
 
-- [ ] Add a form for creating an expense using existing validation rules.
-- [ ] Show expenses newest first, with the existing date-range and category
+- [x] Add a form for creating an expense using existing validation rules.
+- [x] Show expenses newest first, with the existing date-range and category
   filters where practical.
-- [ ] Show the monthly total and category totals using integer cents.
-- [ ] Provide deletion with an explicit confirmation to reduce accidental data
+- [x] Show the monthly total and category totals using integer cents.
+- [x] Provide deletion with an explicit confirmation to reduce accidental data
   loss.
-- [ ] Display validation and storage errors clearly; do not report success if
+- [x] Display validation and storage errors clearly; do not report success if
   persistence failed.
-- [ ] Add tests for successful requests, invalid input, filtering, summaries,
+- [x] Add tests for successful requests, invalid input, filtering, summaries,
   deletion, and storage failures.
-- [ ] Verify the CLI continues to work against the same local data.
+- [x] Verify the CLI continues to work against the same local data.
 
 ### 4. Verify local operation and establish basic data safety
 

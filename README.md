@@ -5,6 +5,9 @@ personal expenses.
 
 This is a learning project for practicing agent-assisted development and standard engineering habits: version control, testing, linting, and CI.
 
+<img src=./docs/images/MVP_screenshot.png width="300">
+<img src=./docs/images/11-08-2026_docs_endpoint_screenshot.png width="600">
+
 ## Requirements and setup
 
 - Python 3.12 or later
@@ -82,6 +85,9 @@ On macOS or Linux:
 export EXPENSE_TRACKER_DB_PATH="$HOME/.expense_tracker/expenses.sqlite3"
 .venv/bin/uvicorn expense_tracker.web:app --reload
 ```
+
+In the web app, use an expense's **Delete** link to review the record before
+confirming its deletion.
 
 ## Project structure
 
