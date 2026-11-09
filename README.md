@@ -5,6 +5,9 @@ personal expenses.
 
 This is a learning project for practicing agent-assisted development and standard engineering habits: version control, testing, linting, and CI.
 
+<img src=./docs/images/MVP_screenshot.png width="300">
+<img src=./docs/images/11-08-2026_docs_endpoint_screenshot.png width="600">
+
 ## Requirements and setup
 
 - Python 3.12 or later
