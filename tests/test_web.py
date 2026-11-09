@@ -149,9 +149,7 @@ def test_confirmed_delete_removes_expense(
 
     with TestClient(app) as client:
         client.get(f"/expenses/{expense.id}/delete")
-        response = client.post(
-            f"/expenses/{expense.id}/delete", follow_redirects=False
-        )
+        response = client.post(f"/expenses/{expense.id}/delete", follow_redirects=False)
         result = client.get(response.headers["location"])
 
     assert response.status_code == 303
