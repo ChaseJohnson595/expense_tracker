@@ -2,6 +2,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from expense_tracker.models import Expense
@@ -11,17 +12,12 @@ from expense_tracker.storage import (
     get_database_path,
     list_expenses,
 )
-from expense_tracker.web import app
+from expense_tracker.web import app, create_app
 
 
-@pytest.fixture(autouse=True)
-def use_temporary_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(
-        app.state,
-        "database_path",
-        str(tmp_path / "expenses.sqlite3"),
-        raising=False,
-    )
+@pytest.fixture
+def test_app(tmp_path: Path) -> FastAPI:
+    return create_app(tmp_path / "expenses.sqlite3")
 
 
 def test_application_entry_point_starts() -> None:
@@ -32,16 +28,16 @@ def test_application_entry_point_starts() -> None:
     assert response.json()["info"]["title"] == "Expense Tracker"
 
 
-def test_health_route_returns_ok() -> None:
-    with TestClient(app) as client:
+def test_health_route_returns_ok(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
         response = client.get("/health")
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
 
 
-def test_home_route_renders_minimal_page() -> None:
-    with TestClient(app) as client:
+def test_home_route_renders_minimal_page(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
         response = client.get("/")
 
     assert response.status_code == 200
@@ -56,14 +52,12 @@ def test_home_route_renders_minimal_page() -> None:
     assert 'name="category"' in response.text
 
 
-def test_home_lists_expenses_newest_first(
-    tmp_path: Path,
-) -> None:
+def test_home_lists_expenses_newest_first(tmp_path: Path, test_app: FastAPI) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     add_expense(Expense(1250, "Food", "2026-11-07", "Older"), database_path)
     add_expense(Expense(250, "Transit", "2026-11-08", "Newer"), database_path)
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.get("/")
 
     assert response.status_code == 200
@@ -73,7 +67,7 @@ def test_home_lists_expenses_newest_first(
 
 
 def test_home_shows_current_month_and_category_totals(
-    tmp_path: Path,
+    tmp_path: Path, test_app: FastAPI
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     today = date.today()
@@ -86,7 +80,7 @@ def test_home_shows_current_month_and_category_totals(
     add_expense(Expense(250, "Transit", today.isoformat()), database_path)
     add_expense(Expense(900, "Food", previous_month.isoformat()), database_path)
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.get("/", params={"category": "Transit"})
 
     assert response.status_code == 200
@@ -98,7 +92,7 @@ def test_home_shows_current_month_and_category_totals(
 
 
 def test_home_filters_expenses_by_inclusive_dates_and_category(
-    tmp_path: Path,
+    tmp_path: Path, test_app: FastAPI
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     add_expense(Expense(100, "Food", "2026-11-01", "Start"), database_path)
@@ -106,7 +100,7 @@ def test_home_filters_expenses_by_inclusive_dates_and_category(
     add_expense(Expense(300, "Transit", "2026-11-15", "Other category"), database_path)
     add_expense(Expense(400, "Food", "2026-12-01", "Outside range"), database_path)
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.get(
             "/",
             params={
@@ -127,13 +121,13 @@ def test_home_filters_expenses_by_inclusive_dates_and_category(
 
 
 def test_delete_confirmation_does_not_remove_expense(
-    tmp_path: Path,
+    tmp_path: Path, test_app: FastAPI
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
     add_expense(expense, database_path)
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.get(f"/expenses/{expense.id}/delete")
         cancel_response = client.get("/")
 
@@ -145,14 +139,12 @@ def test_delete_confirmation_does_not_remove_expense(
     assert list_expenses(database_path) == [expense]
 
 
-def test_confirmed_delete_removes_expense(
-    tmp_path: Path,
-) -> None:
+def test_confirmed_delete_removes_expense(tmp_path: Path, test_app: FastAPI) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
     add_expense(expense, database_path)
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         client.get(f"/expenses/{expense.id}/delete")
         response = client.post(f"/expenses/{expense.id}/delete", follow_redirects=False)
         result = client.get(response.headers["location"])
@@ -162,8 +154,8 @@ def test_confirmed_delete_removes_expense(
     assert "Expense deleted successfully." in result.text
 
 
-def test_home_rejects_reversed_date_filter() -> None:
-    with TestClient(app) as client:
+def test_home_rejects_reversed_date_filter(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
         response = client.get(
             "/", params={"start_date": "2026-11-30", "end_date": "2026-11-01"}
         )
@@ -173,11 +165,11 @@ def test_home_rejects_reversed_date_filter() -> None:
 
 
 def test_create_expense_form_saves_valid_expense(
-    tmp_path: Path,
+    tmp_path: Path, test_app: FastAPI
 ) -> None:
     database_path = tmp_path / "expenses.sqlite3"
 
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.post(
             "/",
             data={
@@ -199,8 +191,8 @@ def test_create_expense_form_saves_valid_expense(
     assert saved_expense.note == "Lunch"
 
 
-def test_create_expense_form_displays_validation_error() -> None:
-    with TestClient(app) as client:
+def test_create_expense_form_displays_validation_error(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
         response = client.post(
             "/",
             data={"amount": "0", "category": "Food", "date": "", "note": ""},
@@ -212,13 +204,13 @@ def test_create_expense_form_displays_validation_error() -> None:
 
 
 def test_create_expense_form_displays_storage_error(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI
 ) -> None:
     def fail_to_save(expense: Expense, data_path: Path | str | None = None) -> Expense:
         raise StorageError("Database is unavailable")
 
     monkeypatch.setattr("expense_tracker.web.add_expense", fail_to_save)
-    with TestClient(app) as client:
+    with TestClient(test_app) as client:
         response = client.post(
             "/",
             data={"amount": "12.50", "category": "Food", "date": "", "note": ""},
@@ -229,11 +221,31 @@ def test_create_expense_form_displays_storage_error(
     assert "Expense added successfully." not in response.text
 
 
-def test_unknown_route_returns_not_found() -> None:
-    with TestClient(app) as client:
+def test_unknown_route_returns_not_found(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
         response = client.get("/does-not-exist")
 
     assert response.status_code == 404
+
+
+def test_confirmed_delete_displays_storage_error(
+    monkeypatch: pytest.MonkeyPatch, test_app: FastAPI, tmp_path: Path
+) -> None:
+    database_path = tmp_path / "expenses.sqlite3"
+    expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
+    add_expense(expense, database_path)
+
+    def fail_to_delete(expense_id: str, data_path: Path | str | None = None) -> bool:
+        raise StorageError("Database is unavailable")
+
+    monkeypatch.setattr("expense_tracker.web.delete_expense", fail_to_delete)
+    with TestClient(test_app) as client:
+        response = client.post(f"/expenses/{expense.id}/delete")
+
+    assert response.status_code == 500
+    assert "Could not delete expense: Database is unavailable" in response.text
+    assert "Expense deleted successfully." not in response.text
+    assert list_expenses(database_path) == [expense]
 
 
 def test_database_path_uses_environment_override(
