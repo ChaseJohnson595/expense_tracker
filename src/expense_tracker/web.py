@@ -6,10 +6,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from expense_tracker.models import create_expense, summarize_expenses
+from expense_tracker.models import Expense, create_expense, summarize_expenses
 from expense_tracker.storage import (
     StorageError,
     add_expense,
+    delete_expense,
     get_database_path,
     list_expenses,
     load_expenses,
@@ -30,7 +31,45 @@ def health() -> dict[str, str]:
 @app.get("/")
 def home(request: Request) -> HTMLResponse:
     created = request.query_params.get("created") == "1"
-    return _render_home(request, created=created)
+    deleted = request.query_params.get("deleted") == "1"
+    return _render_home(request, created=created, deleted=deleted)
+
+
+@app.get("/expenses/{expense_id}/delete")
+def confirm_delete_expense(request: Request, expense_id: str) -> HTMLResponse:
+    try:
+        expense = next(
+            (
+                item
+                for item in load_expenses(app.state.database_path)
+                if item.id == expense_id
+            ),
+            None,
+        )
+    except StorageError as error:
+        return _render_home(
+            request,
+            error=f"Could not load expense: {error}",
+            status_code=500,
+        )
+    if expense is None:
+        return _render_home(request, error="Expense not found.", status_code=404)
+    return _render_home(request, delete_confirmation=expense)
+
+
+@app.post("/expenses/{expense_id}/delete")
+def delete_expense_from_web(request: Request, expense_id: str) -> Response:
+    try:
+        deleted = delete_expense(expense_id, app.state.database_path)
+    except StorageError as error:
+        return _render_home(
+            request,
+            error=f"Could not delete expense: {error}",
+            status_code=500,
+        )
+    if not deleted:
+        return _render_home(request, error="Expense not found.", status_code=404)
+    return RedirectResponse(url="/?deleted=1", status_code=303)
 
 
 @app.post("/")
@@ -89,6 +128,8 @@ def _render_home(
     form: dict[str, str] | None = None,
     error: str | None = None,
     created: bool = False,
+    deleted: bool = False,
+    delete_confirmation: Expense | None = None,
     status_code: int = 200,
 ) -> HTMLResponse:
     filters = {
@@ -137,6 +178,8 @@ def _render_home(
             "form": form_values,
             "error": error,
             "created": created,
+            "deleted": deleted,
+            "delete_confirmation": delete_confirmation,
             "filters": filters,
             "expenses": expenses,
             "current_month": current_month,

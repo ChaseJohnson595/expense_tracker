@@ -119,6 +119,46 @@ def test_home_filters_expenses_by_inclusive_dates_and_category(
     assert 'value=" food "' in response.text
 
 
+def test_delete_confirmation_does_not_remove_expense(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    database_path = tmp_path / "expenses.sqlite3"
+    monkeypatch.setattr(app.state, "database_path", str(database_path))
+    expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
+    add_expense(expense, database_path)
+
+    with TestClient(app) as client:
+        response = client.get(f"/expenses/{expense.id}/delete")
+        cancel_response = client.get("/")
+
+    assert response.status_code == 200
+    assert "Confirm deletion" in response.text
+    assert "Confirm deletion</button>" in response.text
+    assert "Cancel</a>" in response.text
+    assert cancel_response.status_code == 200
+    assert list_expenses(database_path) == [expense]
+
+
+def test_confirmed_delete_removes_expense(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    database_path = tmp_path / "expenses.sqlite3"
+    monkeypatch.setattr(app.state, "database_path", str(database_path))
+    expense = Expense(1250, "Food", "2026-11-08", "Lunch", id="food1234")
+    add_expense(expense, database_path)
+
+    with TestClient(app) as client:
+        client.get(f"/expenses/{expense.id}/delete")
+        response = client.post(
+            f"/expenses/{expense.id}/delete", follow_redirects=False
+        )
+        result = client.get(response.headers["location"])
+
+    assert response.status_code == 303
+    assert list_expenses(database_path) == []
+    assert "Expense deleted successfully." in result.text
+
+
 def test_home_rejects_reversed_date_filter(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:

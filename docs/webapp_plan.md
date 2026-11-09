@@ -131,7 +131,7 @@ operations; do not duplicate business rules between the two interfaces.
 - [x] Show expenses newest first, with the existing date-range and category
   filters where practical.
 - [x] Show the monthly total and category totals using integer cents.
-- [ ] Provide deletion with an explicit confirmation to reduce accidental data
+- [x] Provide deletion with an explicit confirmation to reduce accidental data
   loss.
 - [ ] Display validation and storage errors clearly; do not report success if
   persistence failed.

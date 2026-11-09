@@ -83,6 +83,9 @@ export EXPENSE_TRACKER_DB_PATH="$HOME/.expense_tracker/expenses.sqlite3"
 .venv/bin/uvicorn expense_tracker.web:app --reload
 ```
 
+In the web app, use an expense's **Delete** link to review the record before
+confirming its deletion.
+
 ## Project structure
 
 ```

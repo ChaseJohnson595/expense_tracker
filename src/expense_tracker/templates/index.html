@@ -11,8 +11,22 @@
       {% if created %}
       <p role="status">Expense added successfully.</p>
       {% endif %}
+      {% if deleted %}
+      <p role="status">Expense deleted successfully.</p>
+      {% endif %}
       {% if error %}
       <p role="alert">{{ error }}</p>
+      {% endif %}
+      {% if delete_confirmation %}
+      <section aria-labelledby="confirm-delete-heading">
+        <h2 id="confirm-delete-heading">Confirm deletion</h2>
+        <p>Delete {{ delete_confirmation.date }} {{ delete_confirmation.category }} for
+          ${{ "%d.%02d"|format(delete_confirmation.amount_cents // 100, delete_confirmation.amount_cents % 100) }}?</p>
+        <form action="/expenses/{{ delete_confirmation.id }}/delete" method="post">
+          <button type="submit">Confirm deletion</button>
+        </form>
+        <a href="/">Cancel</a>
+      </section>
       {% endif %}
       <section aria-labelledby="monthly-summary-heading">
         <h2 id="monthly-summary-heading">Monthly summary for {{ current_month }}</h2>
@@ -84,6 +98,7 @@
               <th scope="col">Category</th>
               <th scope="col">Amount</th>
               <th scope="col">Note</th>
+              <th scope="col">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -93,6 +108,7 @@
               <td>{{ expense.category }}</td>
               <td>${{ "%d.%02d"|format(expense.amount_cents // 100, expense.amount_cents % 100) }}</td>
               <td>{{ expense.note or "" }}</td>
+              <td><a href="/expenses/{{ expense.id }}/delete">Delete</a></td>
             </tr>
             {% endfor %}
           </tbody>
