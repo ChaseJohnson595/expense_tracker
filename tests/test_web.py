@@ -52,6 +52,15 @@ def test_home_route_renders_minimal_page(test_app: FastAPI) -> None:
     assert 'name="category"' in response.text
 
 
+def test_stylesheet_is_served(test_app: FastAPI) -> None:
+    with TestClient(test_app) as client:
+        response = client.get("/static/style.css")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/css")
+    assert "--color-ink" in response.text
+
+
 def test_home_lists_expenses_newest_first(tmp_path: Path, test_app: FastAPI) -> None:
     database_path = tmp_path / "expenses.sqlite3"
     add_expense(Expense(1250, "Food", "2026-11-07", "Older"), database_path)
