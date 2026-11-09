@@ -141,12 +141,12 @@ operations; do not duplicate business rules between the two interfaces.
 
 ### 4. Verify local operation and establish basic data safety
 
-- [ ] Run the app locally and verify expenses persist across restarts.
-- [ ] Configure the database location outside the source tree and keep database
+- [x] Run the app locally and verify expenses persist across restarts.
+- [x] Configure the database location outside the source tree and keep database
   files out of version control.
-- [ ] Document how to start and stop the app, where its data lives, and how to
+- [x] Document how to start and stop the app, where its data lives, and how to
   make and restore a backup.
-- [ ] Test restoring a backup before relying on the app for personal records.
+- [x] Test restoring a backup before relying on the app for personal records.
 
 ### 5. Choose the LAN sharing model
 
