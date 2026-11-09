@@ -15,9 +15,7 @@ from expense_tracker.web import app
 
 
 @pytest.fixture(autouse=True)
-def use_temporary_database(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
-) -> None:
+def use_temporary_database(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     monkeypatch.setattr(
         app.state,
         "database_path",
