@@ -14,6 +14,18 @@ from expense_tracker.storage import (
 from expense_tracker.web import app
 
 
+@pytest.fixture(autouse=True)
+def use_temporary_database(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(
+        app.state,
+        "database_path",
+        str(tmp_path / "expenses.sqlite3"),
+        raising=False,
+    )
+
+
 def test_application_entry_point_starts() -> None:
     with TestClient(app) as client:
         response = client.get("/openapi.json")
