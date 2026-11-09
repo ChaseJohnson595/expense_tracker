@@ -4,6 +4,7 @@ from urllib.parse import parse_qs
 
 from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from expense_tracker.models import Expense, create_expense, summarize_expenses
@@ -194,6 +195,11 @@ def create_app(database_path: Path | str | None = None) -> FastAPI:
     selected_path = get_database_path() if database_path is None else database_path
     application.state.database_path = str(selected_path)
     application.include_router(router)
+    application.mount(
+        "/static",
+        StaticFiles(directory=Path(__file__).parent / "static"),
+        name="static",
+    )
     return application
 
 

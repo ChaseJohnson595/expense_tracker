@@ -12,7 +12,7 @@ dependencies = ["fastapi", "jinja2", "uvicorn"]
 where = ["src"]
 
 [tool.setuptools.package-data]
-expense_tracker = ["templates/*.html"]
+expense_tracker = ["templates/*.html", "static/*.css"]
 
 [project.scripts]
 expense-tracker = "expense_tracker.cli:main"
