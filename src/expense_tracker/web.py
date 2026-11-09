@@ -6,12 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from expense_tracker.models import create_expense
+from expense_tracker.models import create_expense, summarize_expenses
 from expense_tracker.storage import (
     StorageError,
     add_expense,
     get_database_path,
     list_expenses,
+    load_expenses,
 )
 
 app = FastAPI(title="Expense Tracker")
@@ -111,6 +112,17 @@ def _render_home(
         status_code = 500
         expenses = []
 
+    current_month = date.today().strftime("%Y-%m")
+    try:
+        monthly_total_cents, category_totals = summarize_expenses(
+            load_expenses(app.state.database_path), month=current_month
+        )
+    except StorageError as summary_error:
+        error = f"Could not load monthly summary: {summary_error}"
+        status_code = 500
+        monthly_total_cents = None
+        category_totals = {}
+
     form_values = form or {
         "amount": "",
         "category": "",
@@ -127,6 +139,9 @@ def _render_home(
             "created": created,
             "filters": filters,
             "expenses": expenses,
+            "current_month": current_month,
+            "monthly_total_cents": monthly_total_cents,
+            "category_totals": category_totals,
         },
         status_code=status_code,
     )

@@ -1,3 +1,4 @@
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -60,6 +61,32 @@ def test_home_lists_expenses_newest_first(
     assert response.text.index("Newer") < response.text.index("Older")
     assert "$2.50" in response.text
     assert "$12.50" in response.text
+
+
+def test_home_shows_current_month_and_category_totals(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    database_path = tmp_path / "expenses.sqlite3"
+    monkeypatch.setattr(app.state, "database_path", str(database_path))
+    today = date.today()
+    previous_month = (
+        date(today.year - 1, 12, 15)
+        if today.month == 1
+        else date(today.year, today.month - 1, 15)
+    )
+    add_expense(Expense(1250, "Food", today.isoformat()), database_path)
+    add_expense(Expense(250, "Transit", today.isoformat()), database_path)
+    add_expense(Expense(900, "Food", previous_month.isoformat()), database_path)
+
+    with TestClient(app) as client:
+        response = client.get("/", params={"category": "Transit"})
+
+    assert response.status_code == 200
+    assert f"Monthly summary for {today:%Y-%m}" in response.text
+    assert "Total: $15.00" in response.text
+    assert "Food: $12.50" in response.text
+    assert "Transit: $2.50" in response.text
+    assert "Previous month" not in response.text
 
 
 def test_home_filters_expenses_by_inclusive_dates_and_category(
