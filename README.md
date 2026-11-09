@@ -63,6 +63,88 @@ application creates the parent directory and database schema automatically when
 needed. JSON remains an import-only format for migrating existing records into
 SQLite; it is not used for ongoing storage.
 
+When `EXPENSE_TRACKER_DB_PATH` is set, that path is used instead of the default.
+Set it to the same value when starting the app and when running the backup or
+restore steps below.
+
+### Back up the database
+
+Backups contain personal expense data. Store them somewhere private and separate
+from the project directory. This PowerShell example creates a timestamped backup
+under your user profile using SQLite's online backup API:
+
+```powershell
+$backupDirectory = Join-Path $HOME ".expense_tracker\backups"
+New-Item -ItemType Directory -Force $backupDirectory | Out-Null
+$env:EXPENSE_TRACKER_BACKUP_PATH = Join-Path $backupDirectory "expenses-$(Get-Date -Format 'yyyyMMdd-HHmmss').sqlite3"
+@'
+import os
+import sqlite3
+from pathlib import Path
+
+database_path = Path(os.environ.get(
+    "EXPENSE_TRACKER_DB_PATH",
+    str(Path.home() / ".expense_tracker" / "expenses.sqlite3"),
+)).expanduser()
+backup_path = Path(os.environ["EXPENSE_TRACKER_BACKUP_PATH"]).expanduser()
+if not database_path.is_file():
+    raise FileNotFoundError(f"Database not found: {database_path}")
+backup_path.parent.mkdir(parents=True, exist_ok=True)
+source = sqlite3.connect(database_path)
+destination = sqlite3.connect(backup_path)
+try:
+    source.backup(destination)
+finally:
+    destination.close()
+    source.close()
+print(f"Backup created: {backup_path}")
+'@ | .\.venv\Scripts\python.exe -
+```
+
+### Restore a database backup
+
+Stop the app first by pressing **Ctrl+C** in the terminal running Uvicorn. Set
+`EXPENSE_TRACKER_BACKUP_PATH` to the backup file to restore. Restoring replaces
+the active database contents; make a separate backup of the current database
+first if you may need to recover it.
+
+```powershell
+$env:EXPENSE_TRACKER_BACKUP_PATH = Join-Path $HOME ".expense_tracker\backups\expenses-YYYYMMDD-HHMMSS.sqlite3"
+@'
+import os
+import sqlite3
+from pathlib import Path
+
+database_path = Path(os.environ.get(
+    "EXPENSE_TRACKER_DB_PATH",
+    str(Path.home() / ".expense_tracker" / "expenses.sqlite3"),
+)).expanduser()
+backup_path = Path(os.environ["EXPENSE_TRACKER_BACKUP_PATH"]).expanduser()
+if not backup_path.is_file():
+    raise FileNotFoundError(f"Backup not found: {backup_path}")
+source = sqlite3.connect(backup_path)
+try:
+    result = source.execute("PRAGMA integrity_check").fetchone()[0]
+    if result != "ok":
+        raise RuntimeError(f"Backup integrity check failed: {result}")
+    database_path.parent.mkdir(parents=True, exist_ok=True)
+    destination = sqlite3.connect(database_path)
+    try:
+        source.backup(destination)
+        result = destination.execute("PRAGMA integrity_check").fetchone()[0]
+        if result != "ok":
+            raise RuntimeError(f"Restored database integrity check failed: {result}")
+    finally:
+        destination.close()
+finally:
+    source.close()
+print(f"Database restored: {database_path}")
+'@ | .\.venv\Scripts\python.exe -
+```
+
+Start the app again using the local web app command below and check that the
+expected expenses are present.
+
 ## Local web app
 
 Start the app with:
