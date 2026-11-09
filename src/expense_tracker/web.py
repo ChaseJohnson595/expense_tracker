@@ -1,14 +1,19 @@
+from datetime import date
 from pathlib import Path
+from urllib.parse import parse_qs
 
 from fastapi import FastAPI, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 
-from expense_tracker.storage import get_database_path
+from expense_tracker.models import create_expense
+from expense_tracker.storage import StorageError, add_expense, get_database_path
 
 app = FastAPI(title="Expense Tracker")
 app.state.database_path = str(get_database_path())
 templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+FORM_FIELDS = ("amount", "category", "date", "note")
 
 
 @app.get("/health")
@@ -18,8 +23,82 @@ def health() -> dict[str, str]:
 
 @app.get("/")
 def home(request: Request) -> HTMLResponse:
+    created = request.query_params.get("created") == "1"
+    return _render_home(request, created=created)
+
+
+@app.post("/")
+async def create_expense_from_form(
+    request: Request,
+) -> Response:
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip()
+    if content_type != "application/x-www-form-urlencoded":
+        return _render_home(
+            request, error="Unsupported form content type.", status_code=415
+        )
+    try:
+        values = _parse_form_values(await request.body())
+    except ValueError as error:
+        return _render_home(request, error=str(error), status_code=400)
+    try:
+        expense = create_expense(
+            values["amount"],
+            values["category"],
+            expense_date=values["date"] or None,
+            note=values["note"] or None,
+        )
+    except (TypeError, ValueError) as error:
+        return _render_home(request, form=values, error=str(error), status_code=400)
+
+    try:
+        add_expense(expense, app.state.database_path)
+    except StorageError as error:
+        return _render_home(
+            request,
+            form=values,
+            error=f"Could not save expense: {error}",
+            status_code=500,
+        )
+    return RedirectResponse(url="/?created=1", status_code=303)
+
+
+def _parse_form_values(body: bytes) -> dict[str, str]:
+    try:
+        encoded_form = body.decode("utf-8")
+    except UnicodeDecodeError as error:
+        raise ValueError("Form data must use UTF-8 encoding.") from error
+    submitted = parse_qs(encoded_form, keep_blank_values=True, strict_parsing=True)
+    values = {}
+    for name in FORM_FIELDS:
+        field_values = submitted.get(name, [])
+        if len(field_values) > 1:
+            raise ValueError(f"{name} must be submitted only once.")
+        values[name] = field_values[0] if field_values else ""
+    return values
+
+
+def _render_home(
+    request: Request,
+    *,
+    form: dict[str, str] | None = None,
+    error: str | None = None,
+    created: bool = False,
+    status_code: int = 200,
+) -> HTMLResponse:
+    form_values = form or {
+        "amount": "",
+        "category": "",
+        "date": date.today().isoformat(),
+        "note": "",
+    }
     return templates.TemplateResponse(
         request=request,
         name="index.html",
-        context={"request": request},
+        context={
+            "request": request,
+            "form": form_values,
+            "error": error,
+            "created": created,
+        },
+        status_code=status_code,
     )
